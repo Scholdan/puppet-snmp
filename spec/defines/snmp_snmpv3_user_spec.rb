@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'shellwords'
 
 describe 'snmp::snmpv3_user' do
   on_supported_os.each do |os, facts|
@@ -28,11 +29,11 @@ describe 'snmp::snmpv3_user' do
 
             is_expected.to contain_file('/var/lib/net-snmp/snmpd.conf')
 
-            is_expected.to contain_file_line('create-snmpv3-user-myDEFAULTuser').with(
-              path:  '/var/lib/net-snmp/snmpd.conf',
-              line:  'createUser myDEFAULTuser SHA "myauthpass"',
-              match: '^createUser myDEFAULTuser '
-            ).that_subscribes_to(['Exec[stop-snmpd]']).that_comes_before('Service[snmpd]')
+            is_expected.to contain_exec('create-snmpv3-user-myDEFAULTuser').with(
+              provider: 'shell',
+              command: sensitive("sed -i '/^createUser myDEFAULTuser /d' '/var/lib/net-snmp/snmpd.conf' && "\
+                                 "echo #{Shellwords.escape('createUser myDEFAULTuser SHA "myauthpass"')} >> '/var/lib/net-snmp/snmpd.conf'")
+            ).that_requires(['Exec[stop-snmpd]', 'File[/var/lib/net-snmp/snmpd.conf]']).that_comes_before('Service[snmpd]')
           }
         end
 
@@ -56,11 +57,11 @@ describe 'snmp::snmpv3_user' do
 
             is_expected.to contain_file('/var/lib/net-snmp/snmpd.conf')
 
-            is_expected.to contain_file_line('create-snmpv3-user-myALLuser').with(
-              path:  '/var/lib/net-snmp/snmpd.conf',
-              line:  'createUser myALLuser MD5 "myauthpass" DES "myprivpass"',
-              match: '^createUser myALLuser '
-            ).that_subscribes_to(['Exec[stop-snmpd]']).that_comes_before('Service[snmpd]')
+            is_expected.to contain_exec('create-snmpv3-user-myALLuser').with(
+              provider: 'shell',
+              command: sensitive("sed -i '/^createUser myALLuser /d' '/var/lib/net-snmp/snmpd.conf' && "\
+                                 "echo #{Shellwords.escape('createUser myALLuser MD5 "myauthpass" DES "myprivpass"')} >> '/var/lib/net-snmp/snmpd.conf'")
+            ).that_requires(['Exec[stop-snmpd]', 'File[/var/lib/net-snmp/snmpd.conf]']).that_comes_before('Service[snmpd]')
           }
         end
 
@@ -82,11 +83,11 @@ describe 'snmp::snmpv3_user' do
 
             is_expected.to contain_file('/var/lib/net-snmp/snmptrapd.conf')
 
-            is_expected.to contain_file_line('create-snmpv3-user-myTRAPuser').with(
-              path:  '/var/lib/net-snmp/snmptrapd.conf',
-              line:  'createUser myTRAPuser SHA "myauthpass"',
-              match: '^createUser myTRAPuser '
-            ).that_subscribes_to(['Exec[stop-snmptrapd]']).that_comes_before('Service[snmptrapd]')
+            is_expected.to contain_exec('create-snmpv3-user-myTRAPuser').with(
+              provider: 'shell',
+              command: sensitive("sed -i '/^createUser myTRAPuser /d' '/var/lib/net-snmp/snmptrapd.conf' && "\
+                                 "echo #{Shellwords.escape('createUser myTRAPuser SHA "myauthpass"')} >> '/var/lib/net-snmp/snmptrapd.conf'")
+            ).that_requires(['Exec[stop-snmptrapd]', 'File[/var/lib/net-snmp/snmptrapd.conf]']).that_comes_before('Service[snmptrapd]')
           }
         end
       when 'Debian'
@@ -107,11 +108,11 @@ describe 'snmp::snmpv3_user' do
 
             is_expected.to contain_file('/var/lib/snmp/snmpd.conf')
 
-            is_expected.to contain_file_line('create-snmpv3-user-myDEFAULTuser').with(
-              path:  '/var/lib/snmp/snmpd.conf',
-              line:  'createUser myDEFAULTuser SHA "myauthpass"',
-              match: '^createUser myDEFAULTuser '
-            ).that_subscribes_to(['Exec[stop-snmpd]']).that_comes_before('Service[snmpd]')
+            is_expected.to contain_exec('create-snmpv3-user-myDEFAULTuser').with(
+              provider: 'shell',
+              command: sensitive("sed -i '/^createUser myDEFAULTuser /d' '/var/lib/snmp/snmpd.conf' && "\
+                                 "echo #{Shellwords.escape('createUser myDEFAULTuser SHA "myauthpass"')} >> '/var/lib/snmp/snmpd.conf'")
+            ).that_requires(['Exec[stop-snmpd]', 'File[/var/lib/snmp/snmpd.conf]']).that_comes_before('Service[snmpd]')
           }
         end
 
@@ -135,11 +136,11 @@ describe 'snmp::snmpv3_user' do
 
             is_expected.to contain_file('/var/lib/snmp/snmpd.conf')
 
-            is_expected.to contain_file_line('create-snmpv3-user-myALLuser').with(
-              path:  '/var/lib/snmp/snmpd.conf',
-              line:  'createUser myALLuser MD5 "myauthpass" DES "myprivpass"',
-              match: '^createUser myALLuser '
-            ).that_subscribes_to(['Exec[stop-snmpd]']).that_comes_before('Service[snmpd]')
+            is_expected.to contain_exec('create-snmpv3-user-myALLuser').with(
+              provider: 'shell',
+              command: sensitive("sed -i '/^createUser myALLuser /d' '/var/lib/snmp/snmpd.conf' && "\
+                                 "echo #{Shellwords.escape('createUser myALLuser MD5 "myauthpass" DES "myprivpass"')} >> '/var/lib/snmp/snmpd.conf'")
+            ).that_requires(['Exec[stop-snmpd]', 'File[/var/lib/snmp/snmpd.conf]']).that_comes_before('Service[snmpd]')
           }
         end
 
@@ -161,11 +162,11 @@ describe 'snmp::snmpv3_user' do
 
             is_expected.to contain_file('/var/lib/snmp/snmpd.conf')
 
-            is_expected.to contain_file_line('create-snmpv3-user-myTRAPuser').with(
-              path:  '/var/lib/snmp/snmpd.conf',
-              line:  'createUser myTRAPuser SHA "myauthpass"',
-              match: '^createUser myTRAPuser '
-            ).that_subscribes_to(['Exec[stop-snmpd]']).that_comes_before('Service[snmpd]')
+            is_expected.to contain_exec('create-snmpv3-user-myTRAPuser').with(
+              provider: 'shell',
+              command: sensitive("sed -i '/^createUser myTRAPuser /d' '/var/lib/snmp/snmpd.conf' && "\
+                                 "echo #{Shellwords.escape('createUser myTRAPuser SHA "myauthpass"')} >> '/var/lib/snmp/snmpd.conf'")
+            ).that_requires(['Exec[stop-snmpd]', 'File[/var/lib/snmp/snmpd.conf]']).that_comes_before('Service[snmpd]')
           }
         end
       when 'Suse'
@@ -186,11 +187,11 @@ describe 'snmp::snmpv3_user' do
 
             is_expected.to contain_file('/var/lib/net-snmp/snmpd.conf')
 
-            is_expected.to contain_file_line('create-snmpv3-user-myDEFAULTuser').with(
-              path:  '/var/lib/net-snmp/snmpd.conf',
-              line:  'createUser myDEFAULTuser SHA "myauthpass"',
-              match: '^createUser myDEFAULTuser '
-            ).that_subscribes_to(['Exec[stop-snmpd]']).that_comes_before('Service[snmpd]')
+            is_expected.to contain_exec('create-snmpv3-user-myDEFAULTuser').with(
+              provider: 'shell',
+              command: sensitive("sed -i '/^createUser myDEFAULTuser /d' '/var/lib/net-snmp/snmpd.conf' && "\
+                                 "echo #{Shellwords.escape('createUser myDEFAULTuser SHA "myauthpass"')} >> '/var/lib/net-snmp/snmpd.conf'")
+            ).that_requires(['Exec[stop-snmpd]', 'File[/var/lib/net-snmp/snmpd.conf]']).that_comes_before('Service[snmpd]')
           }
         end
 
@@ -214,11 +215,11 @@ describe 'snmp::snmpv3_user' do
 
             is_expected.to contain_file('/var/lib/net-snmp/snmpd.conf')
 
-            is_expected.to contain_file_line('create-snmpv3-user-myALLuser').with(
-              path:  '/var/lib/net-snmp/snmpd.conf',
-              line:  'createUser myALLuser MD5 "myauthpass" DES "myprivpass"',
-              match: '^createUser myALLuser '
-            ).that_subscribes_to(['Exec[stop-snmpd]']).that_comes_before('Service[snmpd]')
+            is_expected.to contain_exec('create-snmpv3-user-myALLuser').with(
+              provider: 'shell',
+              command: sensitive("sed -i '/^createUser myALLuser /d' '/var/lib/net-snmp/snmpd.conf' && "\
+                                 "echo #{Shellwords.escape('createUser myALLuser MD5 "myauthpass" DES "myprivpass"')} >> '/var/lib/net-snmp/snmpd.conf'")
+            ).that_requires(['Exec[stop-snmpd]', 'File[/var/lib/net-snmp/snmpd.conf]']).that_comes_before('Service[snmpd]')
           }
         end
 
@@ -240,13 +241,29 @@ describe 'snmp::snmpv3_user' do
 
             is_expected.to contain_file('/var/lib/net-snmp/snmptrapd.conf')
 
-            is_expected.to contain_file_line('create-snmpv3-user-myTRAPuser').with(
-              path:  '/var/lib/net-snmp/snmptrapd.conf',
-              line:  'createUser myTRAPuser SHA "myauthpass"',
-              match: '^createUser myTRAPuser '
-            ).that_subscribes_to(['Exec[stop-snmptrapd]']).that_comes_before('Service[snmptrapd]')
+            is_expected.to contain_exec('create-snmpv3-user-myTRAPuser').with(
+              provider: 'shell',
+              command: sensitive("sed -i '/^createUser myTRAPuser /d' '/var/lib/net-snmp/snmptrapd.conf' && "\
+                                 "echo #{Shellwords.escape('createUser myTRAPuser SHA "myauthpass"')} >> '/var/lib/net-snmp/snmptrapd.conf'")
+            ).that_requires(['Exec[stop-snmptrapd]', 'File[/var/lib/net-snmp/snmptrapd.conf]']).that_comes_before('Service[snmptrapd]')
           }
         end
+      end
+
+
+      describe 'with Sensitive authpass and privpass' do
+        let(:title) { 'sensitiveuser' }
+
+        let :params do
+          {
+            authpass: RSpec::Puppet::Sensitive.new('myauthpass'),
+            privpass: RSpec::Puppet::Sensitive.new('myprivpass')
+          }
+        end
+
+        it {
+          is_expected.to contain_exec('create-snmpv3-user-sensitiveuser').with(provider: 'shell')
+        }
       end
 
       describe 'with correct authpass and privpass for md5user' do
@@ -262,7 +279,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.not_to contain_file_line('create-snmpv3-user-md5user')
+          is_expected.not_to contain_exec('create-snmpv3-user-md5user')
         }
       end
 
@@ -279,7 +296,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.to contain_file_line('create-snmpv3-user-md5user')
+          is_expected.to contain_exec('create-snmpv3-user-md5user')
         }
       end
 
@@ -296,7 +313,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.to contain_file_line('create-snmpv3-user-md5user')
+          is_expected.to contain_exec('create-snmpv3-user-md5user')
         }
       end
 
@@ -313,7 +330,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.to contain_file_line('create-snmpv3-user-md5user')
+          is_expected.to contain_exec('create-snmpv3-user-md5user')
         }
       end
 
@@ -330,7 +347,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.not_to contain_file_line('create-snmpv3-user-shauser')
+          is_expected.not_to contain_exec('create-snmpv3-user-shauser')
         }
       end
 
@@ -347,7 +364,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.to contain_file_line('create-snmpv3-user-shauser')
+          is_expected.to contain_exec('create-snmpv3-user-shauser')
         }
       end
 
@@ -364,7 +381,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.to contain_file_line('create-snmpv3-user-shauser')
+          is_expected.to contain_exec('create-snmpv3-user-shauser')
         }
       end
 
@@ -381,7 +398,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.to contain_file_line('create-snmpv3-user-shauser')
+          is_expected.to contain_exec('create-snmpv3-user-shauser')
         }
       end
 
@@ -396,7 +413,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.not_to contain_file_line('create-snmpv3-user-nonuser')
+          is_expected.not_to contain_exec('create-snmpv3-user-nonuser')
         }
       end
 
@@ -411,7 +428,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.to contain_file_line('create-snmpv3-user-nonuser')
+          is_expected.to contain_exec('create-snmpv3-user-nonuser')
         }
       end
 
@@ -428,7 +445,7 @@ describe 'snmp::snmpv3_user' do
         end
 
         it {
-          is_expected.to contain_file_line('create-snmpv3-user-nonuser')
+          is_expected.to contain_exec('create-snmpv3-user-nonuser')
         }
       end
     end

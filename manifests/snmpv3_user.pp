@@ -9,13 +9,15 @@
 #   }
 #
 # @param authpass
-#   Authentication password for the user.
+#   Authentication password for the user. May be a Sensitive value; the
+#   password is kept out of catalogs, reports and logs either way.
 #
 # @param authtype
 #   Authentication type for the user.  SHA or MD5
 #
 # @param privpass
-#   Encryption password for the user.
+#   Encryption password for the user. May be a Sensitive value; the
+#   password is kept out of catalogs, reports and logs either way.
 #
 # @param privtype
 #   Encryption type for the user.  AES or DES
@@ -24,13 +26,16 @@
 #   Which daemon file in which to write the user.  snmpd or snmptrapd
 #
 define snmp::snmpv3_user (
-  String[8]                 $authpass,
-  Enum['SHA','MD5']         $authtype = 'SHA',
-  Optional[String[8]]       $privpass = undef,
-  Enum['AES','DES']         $privtype = 'AES',
-  Enum['snmpd','snmptrapd'] $daemon   = 'snmpd'
+  Variant[String[8], Sensitive[String[8]]]           $authpass,
+  Enum['SHA','MD5']                                  $authtype = 'SHA',
+  Optional[Variant[String[8], Sensitive[String[8]]]] $privpass = undef,
+  Enum['AES','DES']                                  $privtype = 'AES',
+  Enum['snmpd','snmptrapd']                          $daemon   = 'snmpd'
 ) {
   include snmp
+
+  $_authpass = $authpass ? { Sensitive => $authpass.unwrap, default => $authpass }
+  $_privpass = $privpass ? { Sensitive => $privpass.unwrap, default => $privpass }
 
   if ($daemon == 'snmptrapd') and ($facts['os']['family'] != 'Debian') {
     $service_name   = 'snmptrapd'
@@ -38,21 +43,21 @@ define snmp::snmpv3_user (
     $service_name   = 'snmpd'
   }
 
-  $cmd = $privpass ? {
-    undef   => "createUser ${title} ${authtype} \"${authpass}\"",
-    default => "createUser ${title} ${authtype} \"${authpass}\" ${privtype} \"${privpass}\""
+  $cmd = $_privpass ? {
+    undef   => "createUser ${title} ${authtype} \"${_authpass}\"",
+    default => "createUser ${title} ${authtype} \"${_authpass}\" ${privtype} \"${_privpass}\""
   }
 
   if ($title in $facts['snmpv3_user']) {
     # user details from config are available as fact
     $usm_user = $facts['snmpv3_user'][$title]
 
-    $authhash = snmp::snmpv3_usm_hash($authtype, $usm_user['engine'], $authpass)
+    $authhash = snmp::snmpv3_usm_hash($authtype, $usm_user['engine'], $_authpass)
 
     # privacy protocol key may be empty; truncate to 128 bits if used
-    $privhash = empty($privpass) ? {
+    $privhash = empty($_privpass) ? {
       true    => '',
-      default => snmp::snmpv3_usm_hash($authtype, $usm_user['engine'], $privpass, 128)
+      default => snmp::snmpv3_usm_hash($authtype, $usm_user['engine'], $_privpass, 128)
     }
 
     # (re)create the user if at least one of the hashes is different
@@ -96,13 +101,17 @@ define snmp::snmpv3_user (
       }
     }
 
-    file_line { "create-snmpv3-user-${title}":
-      path      => "${snmp::var_net_snmp}/${service_name}.conf",
-      line      => $cmd,
-      match     => "^createUser ${title} ",
-      subscribe => Exec["stop-${service_name}"],
-      require   => File["${snmp::var_net_snmp}/${service_name}.conf"],
-      before    => Service[$service_name],
+    # The createUser line carries the plaintext passphrases: a file_line
+    # would store them in the catalog (and PuppetDB). An exec with a
+    # Sensitive command keeps them out of catalogs, reports and logs.
+    # sed-then-append preserves the replace semantics file_line's match
+    # provided.
+    $conf_file = "${snmp::var_net_snmp}/${service_name}.conf"
+    exec { "create-snmpv3-user-${title}":
+      command  => Sensitive("sed -i '/^createUser ${title} /d' '${conf_file}' && echo ${stdlib::shell_escape($cmd)} >> '${conf_file}'"),
+      provider => 'shell',
+      require  => [Exec["stop-${service_name}"], File[$conf_file]],
+      before   => Service[$service_name],
     }
   }
 
