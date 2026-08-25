@@ -9,13 +9,14 @@
 #   }
 #
 # @param authpass
-#   Authentication password for the user.
+#   Authentication password for the user. May be given as Sensitive; the
+#   createUser line is then marked Sensitive too (redacted in reports/PuppetDB).
 #
 # @param authtype
 #   Authentication type for the user. SHA, SHA-256 or MD5
 #
 # @param privpass
-#   Encryption password for the user.
+#   Encryption password for the user. May be given as Sensitive.
 #
 # @param privtype
 #   Encryption type for the user. AES, AES-256 or DES
@@ -24,13 +25,19 @@
 #   Which daemon file in which to write the user.  snmpd or snmptrapd
 #
 define snmp::snmpv3_user (
-  String[8]                 $authpass,
-  Enum['SHA','SHA-256','MD5'] $authtype = 'SHA',
-  Optional[String[8]]       $privpass = undef,
-  Enum['AES','AES-256','DES'] $privtype = 'AES',
+  Variant[String[8], Sensitive[String[8]]]           $authpass,
+  Enum['SHA','SHA-256','MD5']                         $authtype = 'SHA',
+  Optional[Variant[String[8], Sensitive[String[8]]]] $privpass = undef,
+  Enum['AES','AES-256','DES']                         $privtype = 'AES',
   Enum['snmpd','snmptrapd'] $daemon   = 'snmpd'
 ) {
   include snmp
+
+  # Unwrap Sensitive passwords for the hash calculation and the createUser
+  # line; the line is re-wrapped in Sensitive below if either was Sensitive.
+  $_sensitive = ($authpass =~ Sensitive) or ($privpass =~ Sensitive)
+  $_authpass = if $authpass =~ Sensitive { $authpass.unwrap } else { $authpass }
+  $_privpass = if $privpass =~ Sensitive { $privpass.unwrap } else { $privpass }
 
   if ($daemon == 'snmptrapd') and ($facts['os']['family'] != 'Debian') {
     $service_name   = 'snmptrapd'
@@ -38,25 +45,26 @@ define snmp::snmpv3_user (
     $service_name   = 'snmpd'
   }
 
-  $cmd = $privpass ? {
-    undef   => "createUser ${title} ${authtype} \"${authpass}\"",
-    default => "createUser ${title} ${authtype} \"${authpass}\" ${privtype} \"${privpass}\""
+  $_cmd = $_privpass ? {
+    undef   => "createUser ${title} ${authtype} \"${_authpass}\"",
+    default => "createUser ${title} ${authtype} \"${_authpass}\" ${privtype} \"${_privpass}\""
   }
+  $cmd = if $_sensitive { Sensitive($_cmd) } else { $_cmd }
 
   if ($title in $facts['snmpv3_user']) {
     # user details from config are available as fact
     $usm_user = $facts['snmpv3_user'][$title]
 
-    $authhash = snmp::snmpv3_usm_hash($authtype, $usm_user['engine'], $authpass)
+    $authhash = snmp::snmpv3_usm_hash($authtype, $usm_user['engine'], $_authpass)
 
 # privacy protocol key may be empty; truncate to the required key length
 # AES-256 requires a 256-bit localized key, while AES and DES use 128 bits.
-    $privhash = empty($privpass) ? {
+    $privhash = empty($_privpass) ? {
       true    => '',
       default => snmp::snmpv3_usm_hash(
         $authtype,
         $usm_user['engine'],
-        $privpass,
+        $_privpass,
         $privtype == 'AES-256' ? {
           true    => 256,
           default => 128,
